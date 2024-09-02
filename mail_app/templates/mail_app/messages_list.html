@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список сообщений</title>
+</head>
+<body>
+    <h1>Список сообщений</h1>
+    <p>Email: {{ address }}</p>
+    <a href="{% url 'logout' %}">Выйти</a>
+    <div>
+        <p id="count-title"></p>
+        <p id="progress-title"></p>
+        <div id="progress-bar" style="width: 0%; background: green;"></div>
+        <p id="total-count-title"></p>
+    </div>
+    <table id="messages-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Тема</th>
+                <th>Дата отправки</th>
+                <th>Дата получения</th>
+                <th>Сообщение</th>
+                <th>Файлы</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Строки будут добавляться через WebSocket -->
+        </tbody>
+    </table>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const address = "{{ address }}";
+            const password = "{{ password }}";
+            const user_id = "{{ user_id }}";
+
+            const socket = new WebSocket('ws://' + window.location.host + '/ws/mail/');
+
+            socket.onopen = function(e) {
+                console.log("WebSocket соединение установлено");
+
+                // Отправляем email и пароль через WebSocket
+                socket.send(JSON.stringify({
+                    'action': 'fetch_messages',
+                    'address': address,
+                    'password': password,
+                    'user_id': user_id
+                }));
+            };
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+
+                if (data.checked_count !== undefined) {
+                    const countTitle = document.getElementById('count-title');
+                    countTitle.innerText = `Чтение сообщений: ${data.checked_count}`;
+                }
+
+                if (data.progress !== undefined) {
+                    const progressBar = document.getElementById('progress-bar');
+                    const progressTitle = document.getElementById('progress-title');
+
+                    progressTitle.innerText = `Получение сообщений: `;
+                    progressBar.style.width = `${data.progress}%`;
+                    progressBar.innerHTML = `${Math.round(data.progress)}%`;
+                }
+
+                if (data.total_count !== undefined && data.total_saved !== undefined) {
+                    const totalCountTitle = document.getElementById('total-count-title');
+                    totalCountTitle.innerText = `Всего обработано сообщений: ${data.total_count}, из них загружено: ${data.total_saved}`;
+                }
+
+                if (data.message !== undefined) {
+                    // Добавляем сообщение в таблицу
+                    const tableBody = document.getElementById('messages-table').getElementsByTagName('tbody')[0];
+                    const row = tableBody.insertRow();
+                    row.insertCell(0).textContent = data.message.id;
+                    row.insertCell(1).textContent = data.message.subject;
+                    row.insertCell(2).textContent = data.message.send_date;
+                    row.insertCell(3).textContent = data.message.recieve_date;
+                    row.insertCell(4).textContent = data.message.message;
+                    row.insertCell(5).textContent = data.message.files.join(', ');
+                }
+            };
+
+            socket.onclose = function(e) {
+                console.log("WebSocket соединение закрыто");
+            };
+
+            socket.onerror = function(e) {
+                console.error("Ошибка WebSocket соединения");
+            };
+        });
+    </script>
+</body>
+</html>

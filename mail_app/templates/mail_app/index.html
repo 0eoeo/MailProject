@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Email Notifications</title>
+    <style>
+        #progress-bar {
+            width: 100%;
+            background-color: #9f9f9f;
+        }
+
+        #progress-bar-fill {
+            height: 30px;
+            width: 0;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+            transition: width 0.5s;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Email Notifications</h1>
+
+    <!-- Прогресс-бар -->
+    <div id="progress-bar">
+        <div id="progress-bar-fill">Reading messages</div>
+    </div>
+
+    <!-- Таблица для отображения писем -->
+    <table>
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>Subject</th>
+            </tr>
+        </thead>
+        <tbody id="email-table-body">
+            <!-- Письма будут добавляться сюда -->
+        </tbody>
+    </table>
+
+    <script>
+        const ws = new WebSocket('ws://' + window.location.host + '/ws/mail/');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const emailTableBody = document.getElementById('email-table-body');
+
+        ws.onmessage = function(event) {
+            const data = event.data;
+
+            if (data.startsWith("Error:")) {
+                // Если ошибка, показываем её в прогресс-баре
+                progressBarFill.style.backgroundColor = 'red';
+                progressBarFill.textContent = data;
+                progressBarFill.style.width = '100%';
+            } else if (data.startsWith("Reading")) {
+                // Обновляем прогресс-бар на этапе чтения сообщений
+                progressBarFill.textContent = "Reading messages";
+                progressBarFill.style.width = '50%';
+            } else if (data.startsWith("Getting")) {
+                // Обновляем прогресс-бар на этапе получения сообщений
+                progressBarFill.textContent = "Getting messages";
+                progressBarFill.style.width = '100%';
+            } else {
+                // Обновляем таблицу с письмами
+                const message = JSON.parse(data);
+                const row = document.createElement('tr');
+                const fromCell = document.createElement('td');
+                const subjectCell = document.createElement('td');
+
+                fromCell.textContent = message.from;
+                subjectCell.textContent = message.subject;
+                if (message.subject) {
+                    row.appendChild(fromCell);
+                    row.appendChild(subjectCell);
+                    emailTableBody.appendChild(row);
+                }
+            }
+        };
+
+        ws.onclose = function(event) {
+            progressBarFill.style.backgroundColor = 'red';
+            progressBarFill.textContent = "Connection closed.";
+            progressBarFill.style.width = '100%';
+        };
+    </script>
+</body>
+</html>

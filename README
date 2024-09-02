@@ -1,0 +1,41 @@
+Важная информация:
+
+1. Команда для запуска приложения: daphne -p 8001 mail_project.asgi:application
+   При запуске приложение будет доступно по адресу localhost:8001
+
+2. Убедитесь, что для почтового адреса разрешено подключение по imap
+
+3. Скрипты создания таблиц в Postgres:
+
+CREATE TABLE public.mail_addresses (
+	address varchar(100) NULL,
+	"password" varchar(100) NULL,
+	id serial4 NOT NULL,
+	CONSTRAINT mail_addresses_pk PRIMARY KEY (id)
+);
+
+-- Permissions
+
+ALTER TABLE public.mail_addresses OWNER TO postgres;
+GRANT ALL ON TABLE public.mail_addresses TO postgres;
+GRANT ALL ON TABLE public.mail_addresses TO "admin";
+
+CREATE TABLE public.mail_messages (
+	id serial4 NOT NULL,
+	subject varchar NOT NULL,
+	send_date date NOT NULL,
+	recieve_date date NOT NULL DEFAULT now()::date,
+	message varchar NULL,
+	files _text NULL,
+	message_id varchar NOT NULL,
+	user_id serial4 NOT NULL,
+	CONSTRAINT mail_messages_pk PRIMARY KEY (id),
+	CONSTRAINT mail_messages_un UNIQUE (message_id),
+	CONSTRAINT mail_messages_fk FOREIGN KEY (user_id) REFERENCES public.mail_addresses(id)
+);
+
+-- Permissions
+
+ALTER TABLE public.mail_messages OWNER TO postgres;
+GRANT ALL ON TABLE public.mail_messages TO postgres;
+GRANT ALL ON TABLE public.mail_messages TO "admin";
